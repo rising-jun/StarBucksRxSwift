@@ -1,4 +1,4 @@
-enum GoodsCategory {
+enum GoodsCategory: CaseIterable {
     case coldBrew
     case brewedCoffee
     case espresso
@@ -16,7 +16,7 @@ enum GoodsCategory {
     case fruitAndYogurt
     case snackAndMiniDessert
     case iceCream
-    
+
     var code: String {
         switch self {
         case .coldBrew:  "W0000171"
@@ -44,5 +44,48 @@ enum GoodsCategory {
         case .iceCream:
             "W0000064"
         }
+    }
+
+    var displayName: String {
+        switch self {
+        case .coldBrew:
+            "Cold Brew"
+        case .brewedCoffee:
+            "Brewed"
+        case .espresso:
+            "Espresso"
+        case .prachino:
+            "Frappuccino"
+        case .blended:
+            "Blended"
+        case .refresher:
+            "Refresher"
+        case .pizio:
+            "Fizzio"
+        case .tea:
+            "Tea"
+        case .etc:
+            "Etc"
+        case .juice:
+            "Juice"
+        case .bread:
+            "Bread"
+        case .cake:
+            "Cake"
+        case .sandwichAndSalad:
+            "Sandwich"
+        case .warmFood:
+            "Warm Food"
+        case .fruitAndYogurt:
+            "Yogurt"
+        case .snackAndMiniDessert:
+            "Snack"
+        case .iceCream:
+            "Ice Cream"
+        }
+    }
+
+    static var appSections: [GoodsCategory] {
+        [.coldBrew, .espresso, .tea, .bread, .cake]
     }
 }
