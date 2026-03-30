@@ -3,7 +3,7 @@ import RxSwift
 
 
 final class NetworkService{
-    func fetchAPI<T: Decodable>(api: BaseAPI) throws -> Single<T>  {
+    func fetchAPI<T: Decodable>(api: BaseAPI) -> Single<T>  {
         Single.create { single in
             guard let urlRequest = api.makeURLRequest() else {
                 single(.failure(NetworkError.invaliedRequestURL))
@@ -24,7 +24,7 @@ final class NetworkService{
                 }
             }
             task.resume()
-            return Disposables.create()
+            return Disposables.create { task.cancel() }
         }
     }
 }
