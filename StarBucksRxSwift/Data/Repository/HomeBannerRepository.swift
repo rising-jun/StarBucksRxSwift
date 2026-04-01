@@ -14,30 +14,32 @@ final class HomeBannerRepository {
     }
     
     func getMenuIfNeededStream() -> Single<[HomeBannerItemDTO]> {
-        let cachedHomeBanners = store.getHomeBanners()
-        if !cachedHomeBanners.isEmpty {
-            return .just(cachedHomeBanners)
+        queue.sync {
+            let cachedHomeBanners = store.getHomeBanners()
+            if !cachedHomeBanners.isEmpty {
+                return .just(cachedHomeBanners)
+            }
+            
+            if let inFlightRequest {
+                return inFlightRequest
+            }
+            
+            let request = fetchHomBannerStream()
+                .do(
+                    onSuccess: { [weak self] banners in
+                        self?.store.setHomeBanners(banners)
+                        self?.clearInFlightRequest()
+                    }, onError: { [weak self] _ in
+                        self?.clearInFlightRequest()
+                    }
+                )
+                .asObservable()
+                .share(replay: 1)
+                .asSingle()
+            
+            inFlightRequest = request
+            return request
         }
-        
-        if let inFlightRequest {
-            return inFlightRequest
-        }
-        
-        let request = fetchHomBannerStream()
-            .do(
-                onSuccess: { [weak self] banners in
-                    self?.store.setHomeBanners(banners)
-                    self?.clearInFlightRequest()
-                }, onError: { [weak self] _ in
-                    self?.clearInFlightRequest()
-                }
-            )
-            .asObservable()
-            .share(replay: 1)
-            .asSingle()
-        
-        inFlightRequest = request
-        return request
     }
     
     func clearInFlightRequest() {

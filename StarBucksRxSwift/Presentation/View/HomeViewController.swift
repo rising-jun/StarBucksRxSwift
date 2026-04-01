@@ -9,8 +9,14 @@ final class HomeViewController: UIViewController {
     
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private let bannerTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Season Banner")
+    private let bannerSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "메인 배너 API로 대체될 영역")
     private let bannerContainerView = UIView()
+    private let menuTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Featured Menu")
+    private let menuSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "메뉴 API가 붙을 대표 메뉴 미리보기")
     private let menuPreviewContainerView = UIView()
+    private let eventTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Events")
+    private let eventSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "이벤트 API가 붙을 카드 리스트 미리보기")
     private let eventPreviewContainerView = UIView()
     
     private let disposeBag = DisposeBag()
@@ -19,12 +25,9 @@ final class HomeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureView()
-        configureLayout()
-        let input = HomeViewModel.Input(
-            viewDidLoad: .just(()),
-            menuCardTapped: menuButtonTapped.asObservable()
-        )
-        binding(input: input)
+        configureHierarchy()
+        configureConstraints()
+        bindViewModel()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -32,7 +35,11 @@ final class HomeViewController: UIViewController {
         navigationController?.setNavigationBarHidden(true, animated: animated)
     }
     
-    private func binding(input: HomeViewModel.Input) {
+    private func bindViewModel() {
+        let input = HomeViewModel.Input(
+            viewDidLoad: .just(()),
+            menuCardTapped: menuButtonTapped.asObservable()
+        )
         let output = viewModel.transform(input: input)
         
         output.HomeBanners
@@ -68,29 +75,24 @@ final class HomeViewController: UIViewController {
         view.backgroundColor = .systemBackground
     }
     
-    private func configureLayout() {
+    private func configureHierarchy() {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
         [
-            makeSectionTitleLabel(text: "Season Banner"),
-            makeSectionSubtitleLabel(text: "메인 배너 API로 대체될 영역"),
+            bannerTitleLabel,
+            bannerSubtitleLabel,
             bannerContainerView,
-            makeSectionTitleLabel(text: "Featured Menu"),
-            makeSectionSubtitleLabel(text: "메뉴 API가 붙을 대표 메뉴 미리보기"),
+            menuTitleLabel,
+            menuSubtitleLabel,
             menuPreviewContainerView,
-            makeSectionTitleLabel(text: "Events"),
-            makeSectionSubtitleLabel(text: "이벤트 API가 붙을 카드 리스트 미리보기"),
+            eventTitleLabel,
+            eventSubtitleLabel,
             eventPreviewContainerView
         ].forEach(contentView.addSubview)
-        
-        let bannerTitleView = contentView.subviews[0]
-        let bannerSubtitleView = contentView.subviews[1]
-        let menuTitleView = contentView.subviews[3]
-        let menuSubtitleView = contentView.subviews[4]
-        let eventTitleView = contentView.subviews[6]
-        let eventSubtitleView = contentView.subviews[7]
-        
+    }
+    
+    private func configureConstraints() {
         scrollView.snp.makeConstraints { make in
             make.edges.equalTo(view.safeAreaLayoutGuide)
         }
@@ -98,40 +100,40 @@ final class HomeViewController: UIViewController {
             make.edges.equalToSuperview()
             make.width.equalTo(scrollView.snp.width)
         }
-        bannerTitleView.snp.makeConstraints { make in
+        bannerTitleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(24)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        bannerSubtitleView.snp.makeConstraints { make in
-            make.top.equalTo(bannerTitleView.snp.bottom).offset(8)
+        bannerSubtitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(bannerTitleLabel.snp.bottom).offset(8)
             make.leading.trailing.equalToSuperview().inset(20)
         }
         bannerContainerView.snp.makeConstraints { make in
-            make.top.equalTo(bannerSubtitleView.snp.bottom).offset(20)
+            make.top.equalTo(bannerSubtitleLabel.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        menuTitleView.snp.makeConstraints { make in
+        menuTitleLabel.snp.makeConstraints { make in
             make.top.equalTo(bannerContainerView.snp.bottom).offset(28)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        menuSubtitleView.snp.makeConstraints { make in
-            make.top.equalTo(menuTitleView.snp.bottom).offset(8)
+        menuSubtitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(menuTitleLabel.snp.bottom).offset(8)
             make.leading.trailing.equalToSuperview().inset(20)
         }
         menuPreviewContainerView.snp.makeConstraints { make in
-            make.top.equalTo(menuSubtitleView.snp.bottom).offset(20)
+            make.top.equalTo(menuSubtitleLabel.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        eventTitleView.snp.makeConstraints { make in
+        eventTitleLabel.snp.makeConstraints { make in
             make.top.equalTo(menuPreviewContainerView.snp.bottom).offset(28)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        eventSubtitleView.snp.makeConstraints { make in
-            make.top.equalTo(eventTitleView.snp.bottom).offset(8)
+        eventSubtitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(eventTitleLabel.snp.bottom).offset(8)
             make.leading.trailing.equalToSuperview().inset(20)
         }
         eventPreviewContainerView.snp.makeConstraints { make in
-            make.top.equalTo(eventSubtitleView.snp.bottom).offset(20)
+            make.top.equalTo(eventSubtitleLabel.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
             make.bottom.equalToSuperview().inset(32)
         }
@@ -198,73 +200,45 @@ final class HomeViewController: UIViewController {
     }
     
     private func renderBanners(with banners: [HomeBannerItemDTO]) {
-        var previousCard: UIView?
-        
-        for banner in banners {
-            let card = makeBannerCard(for: banner)
-            bannerContainerView.addSubview(card)
-            
-            card.snp.makeConstraints { make in
-                make.leading.trailing.equalToSuperview()
-                if let previousCard {
-                    make.top.equalTo(previousCard.snp.bottom).offset(16)
-                } else {
-                    make.top.equalToSuperview()
-                }
-                if banner.menuCode == banners.last?.menuCode && banner.title == banners.last?.title {
-                    make.bottom.equalToSuperview()
-                }
-            }
-            
-            previousCard = card
-        }
+        bannerContainerView.subviews.forEach { $0.removeFromSuperview() }
+        let cards = banners.map(makeBannerCard(for:))
+        layoutCards(cards, in: bannerContainerView, spacing: 16)
     }
     
     private func renderFeaturedMenus(with featuredMenus: [MenuItemDTO]) {
         menuPreviewContainerView.subviews.forEach { $0.removeFromSuperview() }
-        
-        var previousCard: UIView?
-        
-        for item in featuredMenus {
+        let cards = featuredMenus.map { item -> UIView in
             let card = MenuItemCardView()
             card.configure(with: item)
             card.didTap = { [weak self] in
                 guard let productCode = item.productCode else { return }
                 self?.menuButtonTapped.accept(productCode)
             }
-            menuPreviewContainerView.addSubview(card)
-            
-            card.snp.makeConstraints { make in
-                make.leading.trailing.equalToSuperview()
-                if let previousCard {
-                    make.top.equalTo(previousCard.snp.bottom).offset(14)
-                } else {
-                    make.top.equalToSuperview()
-                }
-                if item.productCode == featuredMenus.last?.productCode {
-                    make.bottom.equalToSuperview()
-                }
-            }
-            
-            previousCard = card
+            return card
         }
+        layoutCards(cards, in: menuPreviewContainerView, spacing: 14)
     }
     
     private func renderEvents(with events: [StoreEventItemDTO]) {
+        eventPreviewContainerView.subviews.forEach { $0.removeFromSuperview() }
+        let cards = events.map(makeEventPreviewCard(for:))
+        layoutCards(cards, in: eventPreviewContainerView, spacing: 14)
+    }
+    
+    private func layoutCards(_ cards: [UIView], in containerView: UIView, spacing: CGFloat) {
         var previousCard: UIView?
         
-        for event in events {
-            let card = makeEventPreviewCard(for: event)
-            eventPreviewContainerView.addSubview(card)
+        for (index, card) in cards.enumerated() {
+            containerView.addSubview(card)
             
             card.snp.makeConstraints { make in
                 make.leading.trailing.equalToSuperview()
                 if let previousCard {
-                    make.top.equalTo(previousCard.snp.bottom).offset(14)
+                    make.top.equalTo(previousCard.snp.bottom).offset(spacing)
                 } else {
                     make.top.equalToSuperview()
                 }
-                if event.eventCode == events.last?.eventCode {
+                if index == cards.count - 1 {
                     make.bottom.equalToSuperview()
                 }
             }
@@ -318,14 +292,14 @@ final class HomeViewController: UIViewController {
         return card
     }
     
-    private func makeSectionTitleLabel(text: String) -> UILabel {
+    private static func makeSectionTitleLabel(text: String) -> UILabel {
         let label = UILabel()
         label.text = text
         label.font = .systemFont(ofSize: 26, weight: .bold)
         return label
     }
     
-    private func makeSectionSubtitleLabel(text: String) -> UILabel {
+    private static func makeSectionSubtitleLabel(text: String) -> UILabel {
         let label = UILabel()
         label.text = text
         label.font = .systemFont(ofSize: 14, weight: .medium)

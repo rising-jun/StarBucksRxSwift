@@ -14,32 +14,33 @@ final class MenuRepository {
     }
     
     func getMenuIfNeededStream(by menu: GoodsCategory) -> Single<[MenuItemDTO]> {
-        let cachedMenu = store.getMenus(by: menu)
-        if !cachedMenu.isEmpty {
-            return .just(cachedMenu)
+        queue.sync {
+            let cachedMenu = store.getMenus(by: menu)
+            if !cachedMenu.isEmpty {
+                return .just(cachedMenu)
+            }
+            
+            if let inFlightRequest = inFlightRequest[menu] {
+                return inFlightRequest
+            }
+            
+            let request = fetchMenuStream(by: menu)
+                .do(
+                    onSuccess: { [weak self] menus in
+                        self?.store.setMenus(by: menu, menus: menus)
+                        self?.clearInFlightRequest(by: menu)
+                    }, onError: { [weak self] _ in
+                        self?.clearInFlightRequest(by: menu)
+                    }
+                )
+                .asObservable()
+                .share(replay: 1)
+                .asSingle()
+            
+            inFlightRequest[menu] = request
+            return request
         }
-        
-        if let inFlightRequest = inFlightRequest[menu] {
-            return inFlightRequest
-        }
-        
-        let request = fetchMenuStream(by: menu)
-            .do(
-                onSuccess: { [weak self] menus in
-                    self?.store.setMenus(by: menu, menus: menus)
-                    self?.clearInFlightRequest(by: menu)
-                }, onError: { [weak self] _ in
-                    self?.clearInFlightRequest(by: menu)
-                }
-            )
-            .asObservable()
-            .share(replay: 1)
-            .asSingle()
-        
-        inFlightRequest[menu] = request
-        return request
     }
-    
     func clearInFlightRequest(by menu: GoodsCategory) {
         queue.sync {
             inFlightRequest[menu] = nil
