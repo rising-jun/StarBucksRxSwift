@@ -10,6 +10,7 @@
 		0E7FD2A32F65400D0026948B /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 0E7FD2A22F65400D0026948B /* RxSwift */; };
 		0E7FD2A52F6540100026948B /* RxRelay in Frameworks */ = {isa = PBXBuildFile; productRef = 0E7FD2A42F6540100026948B /* RxRelay */; };
 		0E7FD2A72F6540130026948B /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0E7FD2A62F6540130026948B /* SnapKit */; };
+		0E82608E2F7A41B800CF9C1B /* RxCocoa in Frameworks */ = {isa = PBXBuildFile; productRef = 0E82608D2F7A41B800CF9C1B /* RxCocoa */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +74,7 @@
 			files = (
 				0E7FD2A72F6540130026948B /* SnapKit in Frameworks */,
 				0E7FD2A52F6540100026948B /* RxRelay in Frameworks */,
+				0E82608E2F7A41B800CF9C1B /* RxCocoa in Frameworks */,
 				0E7FD2A32F65400D0026948B /* RxSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -145,6 +147,7 @@
 				0E7FD2A22F65400D0026948B /* RxSwift */,
 				0E7FD2A42F6540100026948B /* RxRelay */,
 				0E7FD2A62F6540130026948B /* SnapKit */,
+				0E82608D2F7A41B800CF9C1B /* RxCocoa */,
 			);
 			productName = StarBucksRxSwift;
 			productReference = 0E7FD23A2F6522250026948B /* StarBucksRxSwift.app */;
@@ -652,6 +655,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0E7FD26F2F652B580026948B /* XCRemoteSwiftPackageReference "SnapKit" */;
 			productName = SnapKit;
+		};
+		0E82608D2F7A41B800CF9C1B /* RxCocoa */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0E7FD26E2F6528F20026948B /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxCocoa;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
