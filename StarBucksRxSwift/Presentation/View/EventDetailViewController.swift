@@ -31,6 +31,7 @@ final class EventDetailViewController: UIViewController {
     private func configureView() {
         view.backgroundColor = .systemBackground
         navigationItem.title = "Event Detail"
+        navigationItem.largeTitleDisplayMode = .never
 
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
         titleLabel.numberOfLines = 0

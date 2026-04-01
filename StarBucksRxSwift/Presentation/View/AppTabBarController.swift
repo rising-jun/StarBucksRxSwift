@@ -46,11 +46,33 @@ final class AppTabBarController: UITabBarController {
         imageName: String
     ) -> UIViewController {
         let navigationController = UINavigationController(rootViewController: rootViewController)
+        configureNavigationBarAppearance(for: navigationController)
         navigationController.tabBarItem = UITabBarItem(
             title: title,
             image: UIImage(systemName: imageName),
             selectedImage: UIImage(systemName: imageName)
         )
         return navigationController
+    }
+
+    private func configureNavigationBarAppearance(for navigationController: UINavigationController) {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundColor = .systemBackground
+        appearance.shadowColor = .clear
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.label,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.label,
+            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
+        ]
+
+        navigationController.navigationBar.standardAppearance = appearance
+        navigationController.navigationBar.scrollEdgeAppearance = appearance
+        navigationController.navigationBar.compactAppearance = appearance
+        navigationController.navigationBar.prefersLargeTitles = false
+        navigationController.navigationBar.tintColor = StarbucksPalette.primaryGreen
     }
 }
