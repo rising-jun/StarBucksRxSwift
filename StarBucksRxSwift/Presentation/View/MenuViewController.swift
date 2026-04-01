@@ -14,7 +14,6 @@ final class MenuViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureView()
-        configureNavigation()
         configureLayout()
         configureCategoryButtons()
     }
@@ -29,11 +28,6 @@ final class MenuViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(MenuItemCell.self, forCellReuseIdentifier: MenuItemCell.reuseIdentifier)
-    }
-
-    private func configureNavigation() {
-        navigationItem.title = "Menu"
-        navigationController?.navigationBar.prefersLargeTitles = true
     }
 
     private func configureLayout() {

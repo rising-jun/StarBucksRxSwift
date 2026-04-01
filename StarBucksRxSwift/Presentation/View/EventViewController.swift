@@ -8,7 +8,6 @@ final class EventViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureView()
-        configureNavigation()
         configureLayout()
     }
 
@@ -22,11 +21,6 @@ final class EventViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(EventItemCell.self, forCellReuseIdentifier: EventItemCell.reuseIdentifier)
-    }
-
-    private func configureNavigation() {
-        navigationItem.title = "Event"
-        navigationController?.navigationBar.prefersLargeTitles = true
     }
 
     private func configureLayout() {
