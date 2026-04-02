@@ -30,7 +30,7 @@ final class MenuItemCell: UITableViewCell {
         contentView.addSubview(cardView)
 
         cardView.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20))
+            make.edges.equalToSuperview().inset(UIEdgeInsets(top: 6, left: 20, bottom: 6, right: 20))
         }
     }
 }
