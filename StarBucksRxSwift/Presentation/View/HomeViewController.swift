@@ -4,7 +4,38 @@ import UIKit
 import RxSwift
 import RxCocoa
 
+private final class BannerGradientView: UIView {
+    override class var layerClass: AnyClass {
+        CAGradientLayer.self
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        guard let gradientLayer = layer as? CAGradientLayer else { return }
+        gradientLayer.colors = [
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(0.18).cgColor,
+            UIColor.black.withAlphaComponent(0.82).cgColor
+        ]
+        gradientLayer.locations = [0.0, 0.55, 1.0]
+        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
+        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
+    }
+}
+
 final class HomeViewController: UIViewController {
+    private enum Layout {
+        static let bannerAspectRatio: CGFloat = 900 / 640
+        static let eventAspectRatio: CGFloat = 0.56
+        static let menuImageDiameter: CGFloat = 108
+        static let menuItemWidth: CGFloat = 124
+        static let menuItemHeight: CGFloat = 152
+        static let menuItemSpacing: CGFloat = 16
+    }
+
+    private static let remoteImageCache = NSCache<NSURL, UIImage>()
+
     private let viewModel = HomeViewModel()
     
     private let scrollView = UIScrollView()
@@ -14,7 +45,18 @@ final class HomeViewController: UIViewController {
     private let bannerContainerView = UIView()
     private let menuTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Featured Menu")
     private let menuSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "메뉴 API가 붙을 대표 메뉴 미리보기")
-    private let menuPreviewContainerView = UIView()
+    private let menuPreviewScrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        return scrollView
+    }()
+    private let menuPreviewStackView: UIStackView = {
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.alignment = .top
+        stackView.spacing = Layout.menuItemSpacing
+        return stackView
+    }()
     private let eventTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Events")
     private let eventSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "이벤트 API가 붙을 카드 리스트 미리보기")
     private let eventPreviewContainerView = UIView()
@@ -33,6 +75,11 @@ final class HomeViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
     
     private func bindViewModel() {
@@ -78,6 +125,7 @@ final class HomeViewController: UIViewController {
     private func configureHierarchy() {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
+        menuPreviewScrollView.addSubview(menuPreviewStackView)
         
         [
             bannerTitleLabel,
@@ -85,7 +133,7 @@ final class HomeViewController: UIViewController {
             bannerContainerView,
             menuTitleLabel,
             menuSubtitleLabel,
-            menuPreviewContainerView,
+            menuPreviewScrollView,
             eventTitleLabel,
             eventSubtitleLabel,
             eventPreviewContainerView
@@ -120,12 +168,17 @@ final class HomeViewController: UIViewController {
             make.top.equalTo(menuTitleLabel.snp.bottom).offset(8)
             make.leading.trailing.equalToSuperview().inset(20)
         }
-        menuPreviewContainerView.snp.makeConstraints { make in
+        menuPreviewScrollView.snp.makeConstraints { make in
             make.top.equalTo(menuSubtitleLabel.snp.bottom).offset(20)
-            make.leading.trailing.equalToSuperview().inset(20)
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(Layout.menuItemHeight)
+        }
+        menuPreviewStackView.snp.makeConstraints { make in
+            make.edges.equalTo(menuPreviewScrollView.contentLayoutGuide).inset(UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 20))
+            make.height.equalTo(menuPreviewScrollView.frameLayoutGuide)
         }
         eventTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(menuPreviewContainerView.snp.bottom).offset(28)
+            make.top.equalTo(menuPreviewScrollView.snp.bottom).offset(28)
             make.leading.trailing.equalToSuperview().inset(20)
         }
         eventSubtitleLabel.snp.makeConstraints { make in
@@ -141,8 +194,19 @@ final class HomeViewController: UIViewController {
     
     private func makeBannerCard(for banner: HomeBannerItemDTO) -> UIView {
         let card = UIView()
-        card.backgroundColor = StarbucksPalette.cream
+        card.backgroundColor = .clear
         card.layer.cornerRadius = 24
+        card.clipsToBounds = true
+
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.backgroundColor = StarbucksPalette.softGray
+        imageView.image = makeBannerPlaceholderImage()
+        configureBannerImage(imageView, with: banner)
+
+        let gradientView = BannerGradientView()
+        gradientView.isUserInteractionEnabled = false
         
         let badgeLabel = PaddingLabel(insets: UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12))
         badgeLabel.text = "BANNER API"
@@ -156,17 +220,18 @@ final class HomeViewController: UIViewController {
         let titleLabel = UILabel()
         titleLabel.text = titleText
         titleLabel.font = .systemFont(ofSize: 21, weight: .bold)
+        titleLabel.textColor = .white
         titleLabel.numberOfLines = 0
         
         let detailLabel = UILabel()
         detailLabel.text = banner.altMessage ?? banner.link ?? "링크 정보 없음"
         detailLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        detailLabel.textColor = .secondaryLabel
+        detailLabel.textColor = UIColor.white.withAlphaComponent(0.88)
         detailLabel.numberOfLines = 0
         
         let actionButton = UIButton(type: .system)
         actionButton.setTitle("배너 링크 열기", for: .normal)
-        actionButton.tintColor = StarbucksPalette.primaryGreen
+        actionButton.tintColor = .white
         actionButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
         actionButton.contentHorizontalAlignment = .left
         actionButton.isHidden = (banner.link ?? "").isEmpty
@@ -177,23 +242,31 @@ final class HomeViewController: UIViewController {
             for: .touchUpInside
         )
         
-        [badgeLabel, titleLabel, detailLabel, actionButton].forEach(card.addSubview)
+        [imageView, gradientView, badgeLabel, titleLabel, detailLabel, actionButton].forEach(card.addSubview)
         
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+            make.height.equalTo(imageView.snp.width).multipliedBy(Layout.bannerAspectRatio)
+        }
+        gradientView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+            make.height.equalToSuperview().multipliedBy(0.62)
+        }
         badgeLabel.snp.makeConstraints { make in
-            make.top.leading.equalToSuperview().inset(18)
+            make.leading.equalToSuperview().inset(20)
+            make.bottom.equalTo(titleLabel.snp.top).offset(-14)
         }
         titleLabel.snp.makeConstraints { make in
-            make.top.equalTo(badgeLabel.snp.bottom).offset(14)
-            make.leading.trailing.equalToSuperview().inset(18)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.bottom.equalTo(detailLabel.snp.top).offset(-8)
         }
         detailLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(10)
-            make.leading.trailing.equalToSuperview().inset(18)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.bottom.equalTo(actionButton.snp.top).offset(-10)
         }
         actionButton.snp.makeConstraints { make in
-            make.top.equalTo(detailLabel.snp.bottom).offset(12)
-            make.leading.trailing.equalToSuperview().inset(18)
-            make.bottom.equalToSuperview().inset(18)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.bottom.equalToSuperview().inset(20)
         }
         
         return card
@@ -206,17 +279,15 @@ final class HomeViewController: UIViewController {
     }
     
     private func renderFeaturedMenus(with featuredMenus: [MenuItemDTO]) {
-        menuPreviewContainerView.subviews.forEach { $0.removeFromSuperview() }
-        let cards = featuredMenus.map { item -> UIView in
-            let card = MenuItemCardView()
-            card.configure(with: item)
-            card.didTap = { [weak self] in
-                guard let productCode = item.productCode else { return }
-                self?.menuButtonTapped.accept(productCode)
-            }
-            return card
+        menuPreviewStackView.arrangedSubviews.forEach { view in
+            menuPreviewStackView.removeArrangedSubview(view)
+            view.removeFromSuperview()
         }
-        layoutCards(cards, in: menuPreviewContainerView, spacing: 14)
+
+        for item in featuredMenus {
+            let previewView = makeFeaturedMenuPreviewView(for: item)
+            menuPreviewStackView.addArrangedSubview(previewView)
+        }
     }
     
     private func renderEvents(with events: [StoreEventItemDTO]) {
@@ -246,50 +317,131 @@ final class HomeViewController: UIViewController {
             previousCard = card
         }
     }
-    
+
     private func makeEventPreviewCard(for item: StoreEventItemDTO) -> UIView {
         let card = UIView()
-        card.backgroundColor = StarbucksPalette.softGray
         card.layer.cornerRadius = 22
+        card.clipsToBounds = true
+        var aspectRatioConstraint = card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: Layout.eventAspectRatio)
+        aspectRatioConstraint.isActive = true
+
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.image = makeEventPlaceholderImage()
+        configureEventImage(imageView, with: item) { [weak card] image in
+            guard let card else { return }
+
+            let size = image.size
+            guard size.width > 0, size.height > 0 else { return }
+
+            let aspectRatio = size.height / size.width
+            aspectRatioConstraint.isActive = false
+            aspectRatioConstraint = card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: aspectRatio)
+            aspectRatioConstraint.isActive = true
+            card.superview?.setNeedsLayout()
+            card.superview?.layoutIfNeeded()
+        }
+
+        let gradientView = BannerGradientView()
+        gradientView.isUserInteractionEnabled = false
         
         let titleLabel = UILabel()
         titleLabel.text = item.eventName ?? "제목 없음"
         titleLabel.font = .systemFont(ofSize: 19, weight: .bold)
+        titleLabel.textColor = .white
         titleLabel.numberOfLines = 0
         
         let dateLabel = UILabel()
         dateLabel.text = "\(item.startDate ?? "-") - \(item.endDate ?? "-")"
         dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        dateLabel.textColor = StarbucksPalette.primaryGreen
+        dateLabel.textColor = UIColor.white.withAlphaComponent(0.9)
         
         let actionButton = UIButton(type: .system)
         actionButton.setTitle("이벤트 보기", for: .normal)
-        actionButton.tintColor = StarbucksPalette.primaryGreen
+        actionButton.tintColor = .white
         actionButton.contentHorizontalAlignment = .left
         actionButton.addAction(
             UIAction { [weak self] _ in
                 guard let code = item.eventCode else { return }
-                let viewController = EventDetailViewController(eventCode: code)
-                self?.navigationController?.pushViewController(viewController, animated: true)
+                self?.openLinkIfNeeded("https://www.starbucks.co.kr/app/whats_new/campaign_view.do?pro_seq=\(code)")
             },
             for: .touchUpInside
         )
         
-        [titleLabel, dateLabel, actionButton].forEach(card.addSubview)
-        
+        [imageView, gradientView, titleLabel, dateLabel, actionButton].forEach(card.addSubview)
+
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        gradientView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+            make.height.equalToSuperview().multipliedBy(0.6)
+        }
         titleLabel.snp.makeConstraints { make in
-            make.top.leading.trailing.equalToSuperview().inset(18)
+            make.leading.trailing.equalToSuperview().inset(18)
+            make.bottom.equalTo(dateLabel.snp.top).offset(-8)
         }
         dateLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(10)
             make.leading.trailing.equalToSuperview().inset(18)
+            make.bottom.equalTo(actionButton.snp.top).offset(-10)
         }
         actionButton.snp.makeConstraints { make in
-            make.top.equalTo(dateLabel.snp.bottom).offset(12)
-            make.leading.trailing.bottom.equalToSuperview().inset(18)
+            make.leading.trailing.equalToSuperview().inset(18)
+            make.bottom.equalToSuperview().inset(18)
         }
         
         return card
+    }
+
+    private func makeFeaturedMenuPreviewView(for item: MenuItemDTO) -> UIView {
+        let containerView = UIView()
+
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = Layout.menuImageDiameter / 2
+        imageView.image = MenuThumbnailFactory.makeImage(for: item, diameter: Layout.menuImageDiameter)
+
+        let titleLabel = UILabel()
+        titleLabel.text = item.productName ?? "이름 없음"
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 2
+
+        let tapButton = UIButton(type: .custom)
+        tapButton.backgroundColor = .clear
+        tapButton.addAction(
+            UIAction { [weak self] _ in
+                guard let productCode = item.productCode else { return }
+                self?.menuButtonTapped.accept(productCode)
+            },
+            for: .touchUpInside
+        )
+
+        containerView.addSubview(imageView)
+        containerView.addSubview(titleLabel)
+        containerView.addSubview(tapButton)
+
+        containerView.snp.makeConstraints { make in
+            make.width.equalTo(Layout.menuItemWidth)
+        }
+        imageView.snp.makeConstraints { make in
+            make.top.centerX.equalToSuperview()
+            make.width.height.equalTo(Layout.menuImageDiameter)
+        }
+        titleLabel.snp.makeConstraints { make in
+            make.top.equalTo(imageView.snp.bottom).offset(12)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.lessThanOrEqualToSuperview()
+        }
+        tapButton.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        configureMenuPreviewImage(imageView, with: item)
+
+        return containerView
     }
     
     private static func makeSectionTitleLabel(text: String) -> UILabel {
@@ -312,5 +464,167 @@ final class HomeViewController: UIViewController {
         guard let link, let url = URL(string: link) else { return }
         let viewController = SFSafariViewController(url: url)
         present(viewController, animated: true)
+    }
+
+    private func configureBannerImage(_ imageView: UIImageView, with banner: HomeBannerItemDTO) {
+        guard let imageURL = makeBannerImageURL(for: banner) else { return }
+        loadImage(from: imageURL, into: imageView)
+    }
+
+    private func configureMenuPreviewImage(_ imageView: UIImageView, with item: MenuItemDTO) {
+        guard let imageURL = makeMenuImageURL(for: item) else { return }
+        loadImage(from: imageURL, into: imageView)
+    }
+
+    private func configureEventImage(
+        _ imageView: UIImageView,
+        with item: StoreEventItemDTO,
+        onLoad: ((UIImage) -> Void)? = nil
+    ) {
+        guard let imageURL = makeEventImageURL(for: item) else { return }
+        loadImage(from: imageURL, into: imageView, onLoad: onLoad)
+    }
+
+    private func loadImage(
+        from url: URL,
+        into imageView: UIImageView,
+        onLoad: ((UIImage) -> Void)? = nil
+    ) {
+        if let cachedImage = Self.remoteImageCache.object(forKey: url as NSURL) {
+            imageView.image = cachedImage
+            onLoad?(cachedImage)
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data, let image = UIImage(data: data) else { return }
+            Self.remoteImageCache.setObject(image, forKey: url as NSURL)
+
+            DispatchQueue.main.async {
+                imageView.image = image
+                onLoad?(image)
+            }
+        }.resume()
+    }
+
+    private func makeBannerImageURL(for banner: HomeBannerItemDTO) -> URL? {
+        let mobileImageName = banner.mobileImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let imageName = banner.imageName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fileName = (mobileImageName?.isEmpty == false ? mobileImageName : nil)
+            ?? (imageName?.isEmpty == false ? imageName : nil)
+        guard let fileName else { return nil }
+        return URL(string: "https://image.istarbucks.co.kr/upload/banner/\(fileName)")
+    }
+
+    private func makeMenuImageURL(for item: MenuItemDTO) -> URL? {
+        let resolvedPath: String?
+        switch (
+            item.imageUploadPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+            item.filePath?.trimmingCharacters(in: .whitespacesAndNewlines)
+        ) {
+        case let (.some(basePath), .some(filePath)) where !basePath.isEmpty && !filePath.isEmpty:
+            resolvedPath = basePath.hasSuffix("/") ? basePath + filePath : basePath + "/" + filePath
+        case let (.some(basePath), _) where !basePath.isEmpty:
+            resolvedPath = basePath
+        case let (_, .some(filePath)) where !filePath.isEmpty:
+            resolvedPath = filePath
+        default:
+            resolvedPath = nil
+        }
+
+        guard let resolvedPath else {
+            return nil
+        }
+
+        return URL(string: resolvedPath)
+    }
+
+    private func makeEventImageURL(for item: StoreEventItemDTO) -> URL? {
+        if
+            let thumbnailName = item.mobileThumbnailName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !thumbnailName.isEmpty
+        {
+            return URL(string: "https://image.istarbucks.co.kr/upload/promotion/\(thumbnailName)")
+        }
+
+        if
+            let thumbnailName = item.webThumbnailName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !thumbnailName.isEmpty
+        {
+            return URL(string: "https://image.istarbucks.co.kr/upload/promotion/\(thumbnailName)")
+        }
+
+        guard
+            let imagePath = item.storeImage?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !imagePath.isEmpty
+        else {
+            return nil
+        }
+
+        if imagePath.hasPrefix("http://") || imagePath.hasPrefix("https://") {
+            return URL(string: imagePath)
+        }
+
+        if imagePath.hasPrefix("/") {
+            return URL(string: "https://image.istarbucks.co.kr\(imagePath)")
+        }
+
+        return URL(string: "https://image.istarbucks.co.kr/\(imagePath)")
+    }
+
+    private func makeBannerPlaceholderImage() -> UIImage? {
+        let size = CGSize(width: 320, height: 176)
+        let renderer = UIGraphicsImageRenderer(size: size)
+
+        return renderer.image { context in
+            let rect = CGRect(origin: .zero, size: size)
+            let drawingContext = context.cgContext
+            let colors = [StarbucksPalette.primaryGreen.cgColor, StarbucksPalette.cream.cgColor] as CFArray
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+            if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1]) {
+                drawingContext.drawLinearGradient(
+                    gradient,
+                    start: CGPoint(x: 0, y: 0),
+                    end: CGPoint(x: size.width, y: size.height),
+                    options: []
+                )
+            }
+
+            let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 40, weight: .medium)
+            let symbolImage = UIImage(
+                systemName: "photo.on.rectangle.angled",
+                withConfiguration: symbolConfiguration
+            )?.withTintColor(.white.withAlphaComponent(0.9), renderingMode: .alwaysOriginal)
+            symbolImage?.draw(in: CGRect(x: rect.midX - 24, y: rect.midY - 24, width: 48, height: 48))
+        }
+    }
+
+    private func makeEventPlaceholderImage() -> UIImage? {
+        let size = CGSize(width: 160, height: 160)
+        let renderer = UIGraphicsImageRenderer(size: size)
+
+        return renderer.image { context in
+            let rect = CGRect(origin: .zero, size: size)
+            let drawingContext = context.cgContext
+            let colors = [StarbucksPalette.primaryGreen.cgColor, StarbucksPalette.softGray.cgColor] as CFArray
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+            if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1]) {
+                drawingContext.drawLinearGradient(
+                    gradient,
+                    start: CGPoint(x: 0, y: 0),
+                    end: CGPoint(x: size.width, y: size.height),
+                    options: []
+                )
+            }
+
+            let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 34, weight: .medium)
+            let symbolImage = UIImage(
+                systemName: "storefront.fill",
+                withConfiguration: symbolConfiguration
+            )?.withTintColor(.white.withAlphaComponent(0.92), renderingMode: .alwaysOriginal)
+            symbolImage?.draw(in: CGRect(x: rect.midX - 20, y: rect.midY - 20, width: 40, height: 40))
+        }
     }
 }
