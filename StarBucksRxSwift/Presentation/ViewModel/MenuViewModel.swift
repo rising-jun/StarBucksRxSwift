@@ -1,6 +1,17 @@
+import Foundation
 import RxCocoa
 import RxSwift
 
+private enum MenuError: LocalizedError {
+    case menuLoadFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .menuLoadFailed:
+            return "메뉴를 불러오지 못했습니다."
+        }
+    }
+}
 
 final class MenuViewModel {
     private let menuRepository = MenuRepository()
@@ -12,9 +23,11 @@ final class MenuViewModel {
     
     struct Output {
         var currentCategoryMenus: Driver<[MenuItemDTO]>
+        var errorMessage: Signal<String>
     }
     
     func transform(input: Input) -> Output {
+        let errorRelay = PublishRelay<String>()
         let selectedCategory = Observable.merge(
             input.viewDidLoad.map { GoodsCategory.blended },
             input.categorySelected.distinctUntilChanged()
@@ -23,22 +36,29 @@ final class MenuViewModel {
         let currentCategoryMenus = selectedCategory
             .flatMapLatest { [weak self] category in
                 guard let self else { return Observable<[MenuItemDTO]>.just([]) }
-                return self.getMenus(for: category)
+                return self.getMenus(for: category, errorRelay: errorRelay)
             }
         
         
         return Output(
-            currentCategoryMenus: currentCategoryMenus.asDriver(onErrorJustReturn: [])
+            currentCategoryMenus: currentCategoryMenus.asDriver(onErrorJustReturn: []),
+            errorMessage: errorRelay.asSignal()
         )
     }
 
-    private func getMenus(for category: GoodsCategory) -> Observable<[MenuItemDTO]> {
+    private func getMenus(
+        for category: GoodsCategory,
+        errorRelay: PublishRelay<String>
+    ) -> Observable<[MenuItemDTO]> {
         return menuRepository.getMenuIfNeededStream(by: category)
             .do(
-                onError: { error in
-                    print(error)
+                onError: { _ in
+                    errorRelay.accept(
+                        MenuError.menuLoadFailed.errorDescription ?? "메뉴를 불러오지 못했습니다."
+                    )
                 }
             )
+            .catchAndReturn([])
             .asObservable()
     }
 }

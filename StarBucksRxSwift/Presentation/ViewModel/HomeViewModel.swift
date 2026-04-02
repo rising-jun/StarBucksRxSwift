@@ -1,5 +1,23 @@
+import Foundation
 import RxCocoa
 import RxSwift
+
+private enum HomeError: LocalizedError {
+    case bannerLoadFailed
+    case menuLoadFailed
+    case eventLoadFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .bannerLoadFailed:
+            return "배너를 불러오지 못했습니다."
+        case .menuLoadFailed:
+            return "메뉴를 불러오지 못했습니다."
+        case .eventLoadFailed:
+            return "이벤트를 불러오지 못했습니다."
+        }
+    }
+}
 
 final class HomeViewModel {
     private let menuRepository: MenuRepository
@@ -26,40 +44,43 @@ final class HomeViewModel {
         var menus: Driver<[MenuItemDTO]>
         var event: Driver<[StoreEventItemDTO]>
         var showMenuDetail: Driver<MenuItemDTO>
+        var errorMessage: Signal<String>
     }
     
     func transform(input: Input) -> Output {
+        let errorRelay = PublishRelay<String>()
+
         let homeBannerItems = input.viewDidLoad
-            .flatMap { [homeBannerRepository] _ in
+            .flatMapLatest { [homeBannerRepository] _ in
                 homeBannerRepository.getMenuIfNeededStream()
                     .asObservable()
-                    .do(onError: { error in
-                        print(error)
+                    .do(onError: { _ in
+                        errorRelay.accept(HomeError.bannerLoadFailed.errorDescription ?? "배너를 불러오지 못했습니다.")
                     })
                     .catchAndReturn([])
             }
         
         let menuItems = input.viewDidLoad
-            .flatMap { [menuRepository] _ in
+            .flatMapLatest { [menuRepository] _ in
                 menuRepository.getMenuIfNeededStream(by: .blended)
                     .asObservable()
-                    .do(onError: { error in
-                        print(error)
+                    .do(onError: { _ in
+                        errorRelay.accept(HomeError.menuLoadFailed.errorDescription ?? "메뉴를 불러오지 못했습니다.")
                     })
                     .catchAndReturn([])
             }
         
         let eventItems = input.viewDidLoad
-            .flatMap { [eventRepository] _ in
+            .flatMapLatest { [eventRepository] _ in
                 eventRepository.getEventsIfNeededStream()
                     .asObservable()
-                    .do(onError: { error in
-                        print(error)
+                    .do(onError: { _ in
+                        errorRelay.accept(HomeError.eventLoadFailed.errorDescription ?? "이벤트를 불러오지 못했습니다.")
                     })
                     .catchAndReturn([])
             }
         
-        let detailMenuItem = input.menuCardTapped
+        let detailMenuItem: Observable<MenuItemDTO> = input.menuCardTapped
             .withLatestFrom(menuItems) { productCode, menuItems in
                 let item = menuItems.first(where: { $0.productCode == productCode })
                 return item
@@ -70,7 +91,8 @@ final class HomeViewModel {
             HomeBanners: homeBannerItems.asDriver(onErrorJustReturn: []),
             menus: menuItems.asDriver(onErrorJustReturn: []),
             event: eventItems.asDriver(onErrorJustReturn: []),
-            showMenuDetail: detailMenuItem.asDriver(onErrorDriveWith: .empty())
+            showMenuDetail: detailMenuItem.asDriver(onErrorDriveWith: Driver.empty()),
+            errorMessage: errorRelay.asSignal()
         )
     }
 }

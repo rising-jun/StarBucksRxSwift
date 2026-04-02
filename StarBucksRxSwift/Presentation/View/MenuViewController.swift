@@ -20,6 +20,19 @@ final class MenuViewController: UIViewController {
     private let disposeBag = DisposeBag()
     private let viewDidLoadRelay = PublishRelay<Void>()
     private let categorySelectedRelay = PublishRelay<GoodsCategory>()
+    private let toastLabel: PaddingLabel = {
+        let label = PaddingLabel(insets: UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16))
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.82)
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.layer.cornerRadius = 16
+        label.clipsToBounds = true
+        label.alpha = 0
+        return label
+    }()
+    private var toastHideWorkItem: DispatchWorkItem?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -58,6 +71,7 @@ final class MenuViewController: UIViewController {
             tableView
         ].forEach(view.addSubview)
         categoryScrollView.addSubview(categoryContentView)
+        view.addSubview(toastLabel)
 
         categoryScrollView.showsHorizontalScrollIndicator = false
 
@@ -73,6 +87,10 @@ final class MenuViewController: UIViewController {
         tableView.snp.makeConstraints { make in
             make.top.equalTo(categoryScrollView.snp.bottom).offset(8)
             make.leading.trailing.bottom.equalToSuperview()
+        }
+        toastLabel.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.bottom.equalTo(view.safeAreaLayoutGuide).inset(16)
         }
     }
 
@@ -127,6 +145,12 @@ final class MenuViewController: UIViewController {
                 owner.contribute(items)
             }
             .disposed(by: disposeBag)
+
+        output.errorMessage
+            .emit(with: self) { owner, message in
+                owner.showToast(message)
+            }
+            .disposed(by: disposeBag)
     }
 
     private func contribute(_ items: [MenuItemDTO]) {
@@ -154,6 +178,23 @@ final class MenuViewController: UIViewController {
             button.backgroundColor = isSelected ? StarbucksPalette.primaryGreen : StarbucksPalette.softGray
             button.setTitleColor(isSelected ? .white : .label, for: .normal)
         }
+    }
+
+    private func showToast(_ message: String) {
+        toastHideWorkItem?.cancel()
+        toastLabel.text = message
+
+        UIView.animate(withDuration: 0.2) {
+            self.toastLabel.alpha = 1
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            UIView.animate(withDuration: 0.2) {
+                self?.toastLabel.alpha = 0
+            }
+        }
+        toastHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: workItem)
     }
 
 }

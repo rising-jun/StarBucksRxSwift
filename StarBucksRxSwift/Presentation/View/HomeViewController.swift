@@ -60,9 +60,22 @@ final class HomeViewController: UIViewController {
     private let eventTitleLabel = HomeViewController.makeSectionTitleLabel(text: "Events")
     private let eventSubtitleLabel = HomeViewController.makeSectionSubtitleLabel(text: "이벤트 API가 붙을 카드 리스트 미리보기")
     private let eventPreviewContainerView = UIView()
+    private let toastLabel: PaddingLabel = {
+        let label = PaddingLabel(insets: UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16))
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.82)
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.layer.cornerRadius = 16
+        label.clipsToBounds = true
+        label.alpha = 0
+        return label
+    }()
     
     private let disposeBag = DisposeBag()
     private var menuButtonTapped = PublishRelay<String>()
+    private var toastHideWorkItem: DispatchWorkItem?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -116,6 +129,12 @@ final class HomeViewController: UIViewController {
                 self?.navigationController?.pushViewController(viewController, animated: true)
             }
             .disposed(by: disposeBag)
+
+        output.errorMessage
+            .emit(with: self) { owner, message in
+                owner.showToast(message)
+            }
+            .disposed(by: disposeBag)
     }
     
     private func configureView() {
@@ -138,6 +157,7 @@ final class HomeViewController: UIViewController {
             eventSubtitleLabel,
             eventPreviewContainerView
         ].forEach(contentView.addSubview)
+        view.addSubview(toastLabel)
     }
     
     private func configureConstraints() {
@@ -189,6 +209,10 @@ final class HomeViewController: UIViewController {
             make.top.equalTo(eventSubtitleLabel.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
             make.bottom.equalToSuperview().inset(32)
+        }
+        toastLabel.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.bottom.equalTo(view.safeAreaLayoutGuide).inset(16)
         }
     }
     
@@ -464,6 +488,23 @@ final class HomeViewController: UIViewController {
         guard let link, let url = URL(string: link) else { return }
         let viewController = SFSafariViewController(url: url)
         present(viewController, animated: true)
+    }
+
+    private func showToast(_ message: String) {
+        toastHideWorkItem?.cancel()
+        toastLabel.text = message
+
+        UIView.animate(withDuration: 0.2) {
+            self.toastLabel.alpha = 1
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            UIView.animate(withDuration: 0.2) {
+                self?.toastLabel.alpha = 0
+            }
+        }
+        toastHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: workItem)
     }
 
     private func configureBannerImage(_ imageView: UIImageView, with banner: HomeBannerItemDTO) {
