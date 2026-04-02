@@ -31,11 +31,6 @@ final class AppTabBarController: UITabBarController {
                 rootViewController: MenuViewController(),
                 title: "Menu",
                 imageName: "cup.and.saucer.fill"
-            ),
-            makeNavigationController(
-                rootViewController: EventViewController(),
-                title: "Event",
-                imageName: "sparkles.rectangle.stack.fill"
             )
         ]
     }
