@@ -4,7 +4,6 @@ import RxSwift
 
 final class MenuViewModel {
     private let menuRepository = MenuRepository()
-    private var allMenus: [GoodsCategory: [MenuItemDTO]] = [:]
     
     struct Input {
         var viewDidLoad: Observable<Void>
@@ -34,15 +33,8 @@ final class MenuViewModel {
     }
 
     private func getMenus(for category: GoodsCategory) -> Observable<[MenuItemDTO]> {
-        if let menus = allMenus[category], !menus.isEmpty {
-            return .just(menus)
-        }
-        
         return menuRepository.getMenuIfNeededStream(by: category)
             .do(
-                onSuccess: { [weak self] menus in
-                    self?.allMenus[category] = menus
-                },
                 onError: { error in
                     print(error)
                 }
