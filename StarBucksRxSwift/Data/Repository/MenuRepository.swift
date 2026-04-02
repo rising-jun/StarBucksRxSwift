@@ -13,19 +13,6 @@ final class MenuRepository {
         return menuItemSingle.map { $0.list ?? [] }
     }
     
-    func getAllMenuIfNeededStream() -> Single<[GoodsCategory: [MenuItemDTO]]> {
-        queue.sync {
-            let requests = GoodsCategory.appSections.map { category in
-                getMenuIfNeededStream(by: category)
-                    .map { (category, $0) }
-            }
-            
-            return Single.zip(requests)
-                .map { Dictionary(uniqueKeysWithValues: $0) }
-        }
-    }
-
-    
     func getMenuIfNeededStream(by menu: GoodsCategory) -> Single<[MenuItemDTO]> {
         queue.sync {
             let cachedMenu = store.getMenus(by: menu)
