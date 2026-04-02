@@ -26,7 +26,6 @@ final class MenuDetailViewController: UIViewController {
     private func configureView() {
         view.backgroundColor = .systemBackground
         navigationItem.title = menuItem.productName ?? "Detail"
-        navigationItem.largeTitleDisplayMode = .never
     }
 
     private func configureLayout() {

@@ -13,9 +13,10 @@ final class MenuItemCardView: UIView {
     private let thumbnailBackgroundView = UIView()
     private let thumbnailImageView = UIImageView()
     private let titleLabel = UILabel()
-    private let descriptionLabel = UILabel()
     private let metaLabel = UILabel()
-    private let badgeLabel = PaddingLabel(insets: UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10))
+    private let badgeLabel = PaddingLabel(insets: UIEdgeInsets(top: 6, left: 11, bottom: 6, right: 11))
+    private let chevronImageView = UIImageView()
+    private let separatorView = UIView()
     private let tapButton = UIButton(type: .custom)
     private var imageLoadTask: URLSessionDataTask?
     private var currentImageURL: URL?
@@ -37,7 +38,6 @@ final class MenuItemCardView: UIView {
 
     func configure(with item: MenuItemDTO) {
         titleLabel.text = item.productName ?? "이름 없음"
-        descriptionLabel.text = item.content ?? "설명 없음"
         metaLabel.text = item.categoryName ?? item.productCode ?? ""
         configureThumbnail(with: item)
 
@@ -52,14 +52,15 @@ final class MenuItemCardView: UIView {
     }
 
     private func configureView() {
-        backgroundColor = .secondarySystemBackground
-        layer.cornerRadius = 22
+        backgroundColor = .systemBackground
+        layer.cornerRadius = 18
         clipsToBounds = true
 
-        thumbnailBackgroundView.layer.cornerRadius = 36
+        thumbnailBackgroundView.layer.cornerRadius = 42
         thumbnailBackgroundView.clipsToBounds = true
 
         thumbnailImageView.contentMode = .scaleAspectFill
+        thumbnailImageView.layer.cornerRadius = 36
         thumbnailImageView.clipsToBounds = true
 
         tapButton.backgroundColor = .clear
@@ -71,53 +72,63 @@ final class MenuItemCardView: UIView {
             for: .touchUpInside
         )
 
-        titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
-        titleLabel.numberOfLines = 0
-
-        descriptionLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        descriptionLabel.textColor = .secondaryLabel
-        descriptionLabel.numberOfLines = 0
+        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        titleLabel.numberOfLines = 2
 
         metaLabel.font = .systemFont(ofSize: 13, weight: .medium)
-        metaLabel.textColor = StarbucksPalette.warmBrown
-        metaLabel.numberOfLines = 0
+        metaLabel.textColor = .secondaryLabel
+        metaLabel.numberOfLines = 1
 
-        badgeLabel.font = .systemFont(ofSize: 11, weight: .bold)
+        badgeLabel.font = .systemFont(ofSize: 10, weight: .bold)
         badgeLabel.textColor = .white
         badgeLabel.backgroundColor = StarbucksPalette.primaryGreen
-        badgeLabel.layer.cornerRadius = 12
+        badgeLabel.layer.cornerRadius = 11
         badgeLabel.clipsToBounds = true
+
+        chevronImageView.image = UIImage(systemName: "chevron.right")
+        chevronImageView.tintColor = .systemGray3
+        chevronImageView.contentMode = .scaleAspectFit
+
+        separatorView.backgroundColor = .systemGray5
     }
 
     private func configureLayout() {
-        [thumbnailBackgroundView, titleLabel, descriptionLabel, metaLabel, badgeLabel, tapButton].forEach(addSubview)
+        [thumbnailBackgroundView, titleLabel, metaLabel, badgeLabel, chevronImageView, separatorView, tapButton].forEach(addSubview)
         thumbnailBackgroundView.addSubview(thumbnailImageView)
 
         thumbnailBackgroundView.snp.makeConstraints { make in
-            make.top.leading.equalToSuperview().inset(18)
-            make.width.height.equalTo(72)
-            make.bottom.lessThanOrEqualToSuperview().inset(18)
+            make.leading.equalToSuperview().inset(18)
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(84)
         }
         thumbnailImageView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-        titleLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().inset(18)
-            make.leading.equalTo(thumbnailBackgroundView.snp.trailing).offset(16)
+        chevronImageView.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(18)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(8)
+            make.height.equalTo(14)
         }
-        descriptionLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(8)
-            make.leading.trailing.equalTo(titleLabel)
+        titleLabel.snp.makeConstraints { make in
+            make.top.equalToSuperview().inset(22)
+            make.leading.equalTo(thumbnailBackgroundView.snp.trailing).offset(16)
+            make.trailing.equalTo(chevronImageView.snp.leading).offset(-14)
         }
         metaLabel.snp.makeConstraints { make in
-            make.top.equalTo(descriptionLabel.snp.bottom).offset(10)
+            make.top.equalTo(titleLabel.snp.bottom).offset(6)
             make.leading.trailing.equalTo(titleLabel)
         }
         badgeLabel.snp.makeConstraints { make in
-            make.top.equalTo(metaLabel.snp.bottom).offset(12)
+            make.top.equalTo(metaLabel.snp.bottom).offset(10)
             make.leading.equalTo(titleLabel)
-            make.bottom.equalToSuperview().inset(18)
+            make.bottom.lessThanOrEqualToSuperview().inset(20)
+        }
+        separatorView.snp.makeConstraints { make in
+            make.leading.equalTo(titleLabel)
+            make.trailing.equalToSuperview().inset(18)
+            make.bottom.equalToSuperview()
+            make.height.equalTo(1)
         }
         tapButton.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -128,7 +139,6 @@ final class MenuItemCardView: UIView {
         imageLoadTask?.cancel()
         imageLoadTask = nil
 
-        thumbnailBackgroundView.backgroundColor = .clear
         thumbnailImageView.image = MenuThumbnailFactory.makeImage(for: item)
 
         guard let imageURL = makeImageURL(for: item) else {
@@ -164,7 +174,6 @@ final class MenuItemCardView: UIView {
     private func applyRemoteImage(_ image: UIImage, for url: URL) {
         guard currentImageURL == url else { return }
         thumbnailImageView.image = image
-        thumbnailBackgroundView.backgroundColor = .clear
     }
 
     private func makeImageURL(for item: MenuItemDTO) -> URL? {

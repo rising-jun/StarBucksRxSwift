@@ -1,5 +1,9 @@
 import SnapKit
 import UIKit
+import RxCocoa
+import RxSwift
+import RxRelay
+
 
 final class MenuViewController: UIViewController {
     private let categoryScrollView = UIScrollView()
@@ -8,23 +12,41 @@ final class MenuViewController: UIViewController {
 
     private let categories = GoodsCategory.appSections
     private var categoryButtons: [UIButton] = []
-    private var selectedCategory: GoodsCategory = .coldBrew
-    private var items: [MenuItemDTO] = MockStarbucksData.menuItems(for: .coldBrew)
-
+    private var selectedCategory: GoodsCategory = .blended
+    private var items: [MenuItemDTO] = []
+    private var shouldScrollToTopAfterReload = false
+    
+    private let viewModel = MenuViewModel()
+    private let disposeBag = DisposeBag()
+    private let viewDidLoadRelay = PublishRelay<Void>()
+    private let categorySelectedRelay = PublishRelay<GoodsCategory>()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureView()
         configureLayout()
         configureCategoryButtons()
+        bindViewModel()
+        viewDidLoadRelay.accept(())
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+    
     private func configureView() {
         view.backgroundColor = .systemBackground
 
         tableView.backgroundColor = .systemBackground
         tableView.separatorStyle = .none
-        tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 120
+        tableView.rowHeight = 144
+        tableView.estimatedRowHeight = 144
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(MenuItemCell.self, forCellReuseIdentifier: MenuItemCell.reuseIdentifier)
@@ -93,12 +115,36 @@ final class MenuViewController: UIViewController {
         updateCategorySelectionUI()
     }
 
+    private func bindViewModel() {
+        let input = MenuViewModel.Input(
+            viewDidLoad: viewDidLoadRelay.asObservable(),
+            categorySelected: categorySelectedRelay.asObservable()
+        )
+        let output = viewModel.transform(input: input)
+
+        output.currentCategoryMenus
+            .drive(with: self) { owner, items in
+                owner.contribute(items)
+            }
+            .disposed(by: disposeBag)
+    }
+
+    private func contribute(_ items: [MenuItemDTO]) {
+        self.items = items
+        tableView.reloadData()
+
+        guard shouldScrollToTopAfterReload else { return }
+        shouldScrollToTopAfterReload = false
+        tableView.layoutIfNeeded()
+        tableView.setContentOffset(CGPoint(x: 0, y: -tableView.adjustedContentInset.top), animated: false)
+    }
+
     private func selectCategory(_ category: GoodsCategory) {
         guard selectedCategory != category else { return }
         selectedCategory = category
         updateCategorySelectionUI()
-        items = MockStarbucksData.menuItems(for: category)
-        tableView.reloadData()
+        shouldScrollToTopAfterReload = true
+        categorySelectedRelay.accept(category)
     }
 
     private func updateCategorySelectionUI() {

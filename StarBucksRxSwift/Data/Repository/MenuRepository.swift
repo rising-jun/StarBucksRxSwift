@@ -41,6 +41,7 @@ final class MenuRepository {
             return request
         }
     }
+    
     func clearInFlightRequest(by menu: GoodsCategory) {
         queue.sync {
             inFlightRequest[menu] = nil

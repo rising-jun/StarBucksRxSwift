@@ -1,4 +1,4 @@
-enum GoodsCategory: CaseIterable {
+enum GoodsCategory: CaseIterable, Equatable {
     case coldBrew
     case brewedCoffee
     case espresso
@@ -86,6 +86,6 @@ enum GoodsCategory: CaseIterable {
     }
 
     static var appSections: [GoodsCategory] {
-        [.coldBrew, .espresso, .tea, .bread, .cake]
+        [.coldBrew, .espresso, .blended, .tea]
     }
 }
